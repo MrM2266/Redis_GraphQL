@@ -1,5 +1,6 @@
 import redis
 import data
+import json
 
 class CTable:
     def __init__(self, name, db_no):
@@ -76,30 +77,121 @@ def RelationMN(table1, table2, interTable, table1_id): #M:N přes pomocnou tabul
     else: return None
 
 
-def GetUser(table, id):
-    data = {
-        "id":id,
-        "name":table.GetItem(id, "name"),
-        "surname":table.GetItem(id, "surname"),
-        "age":table.GetItem(id, "age"),
-        "roles":table.GetItem(id, "roles")
-    }
-    return data
+class Group:
+    def __init__(self, id = None, name = None, groupType = None):
+        self.id = id
+        self.name = name
+        self.groupType = groupType
 
-def GetGroup(table, id):
-    data = {
-        "id":id,
-        "name":table.GetItem(id, "name"),
-        "groupType":table.GetItem(id, "groupType")
-    }
-    return data
+    def Load(self, group_id):
+        self.id = group_id
+        self.name = groups.GetItem(group_id, "name")
+        self.groupType = self.LoadGroupType()
 
-def GetGroupType(table, id):
-    data = {
-        "id":id,
-        "name":table.GetItem(id, "name"),
-    }
-    return data
+    def LoadGroupType(self):
+        #vrací objekt GroupType pro tuto skupinu
+        gt = GroupType()
+        gt.Load(int(groups.GetItem(self.id, "groupType")))
+        return gt
+
+class Person:
+    def __init__(self, id = None, name = None, surname = None, age = None, roles = None, groups = None):
+        self.id = id
+        self.name = name
+        self.surname = surname
+        self.age = age
+        self.roles = roles
+        self.groups = groups
+
+    def Load(self, user_id):
+        self.id = user_id
+        self.name = users.GetItem(user_id, "name")
+        self.surname = users.GetItem(user_id, "surname")
+        self.age = users.GetItem(user_id, "age")
+        self.roles = self.LoadRoles() #list objektů role
+        self.groups = self.LoadGroups() #je to list objektů Group
+
+    def LoadGroups(self):
+        data = RelationMN(users, groups, users_groups, int(self.id))
+        out = []
+        if (data == None):
+            out.append(Group())
+            return out
+        
+        for group in data:
+            tmp = Group()
+            tmp.Load(int(group["id"]))
+            out.append(tmp)
+        if (len(out) != 0): return out
+        else:
+            out.append(Group())
+            return out
+
+    def LoadRoles(self): #TODO: vyřešit prázdné role - co tam má být, když není ve skupině
+        data = users.GetItem(self.id, "roles")
+        out = []
+        if (data == None):
+            out.append(Role())
+            return out
+        
+        data = json.loads(data)
+
+        for role in data:
+            tmp = Role()
+            tmp.Load(role)
+            out.append(tmp)
+
+        if (len(out) != 0): return out
+        else:
+            out.append(Role())
+            return out
+           
+    def PrintGroups(self):
+        for group in self.groups:
+            print(f"ID: {group.id}")
+            print(f"Nazev: {group.name}")
+            print(f"groupType: {group.groupType}\n")
+
+class GroupType:
+    def __init__(self, id = None, name = None):
+        self.id = id
+        self.name = name
+
+    def Load(self, groupType_id):
+        self.id = int(groupType_id)
+        self.name = group_types.GetItem(self.id, "name")
+
+class RoleType:
+    def __init__(self, id = None, name = None):
+        self.id = id
+        self.name = name
+
+    def Load(self, roleType_id):
+        self.id = roleType_id
+        self.name = role_types.GetItem(self.id, "name")
+
+class Role:
+    def __init__(self, id = None, roleType=None, group = None):
+        self.id = id
+        self.roleType = roleType
+        self.group = group
+        #self.user_id = user_id #id uživatele, kterému tato role patří
+
+    def Load(self, data): #data = dic jedné role - této role - dic dostanu z person LoadRoles
+        self.id = data["id"]
+        self.roleType = self.LoadRoleType(data["roletype"])
+        self.group = self.LoadGroup(data["group"])
+        
+    def LoadRoleType(self, roleType_id):
+        tmp = RoleType()
+        tmp.Load(int(roleType_id))
+        return tmp
+
+    def LoadGroup(self, group_id):
+        tmp = Group()
+        tmp.Load(int(group_id))
+        return tmp
+
 
 
 users = CTable("users", 0)
@@ -119,3 +211,13 @@ role_types.Populate(data.data_roleTypes)
 #print(RelationMN(users, groups, users_groups, 1))
 #print(groups.GetLine(1))
 #print(users.GetItem("1", "roles"))
+#print(type(GetRolesFromUser(1)))
+#print(GetRolesFromUser(1))
+
+#p = Person()
+#p.Load(2)
+#print(p.roles[1].group.name)
+
+#r = Role()
+#r.Load(json.loads('{"id":"10", "roletype":"1", "group":"1"}'))
+#print(r.group.groupType.name)

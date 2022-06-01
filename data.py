@@ -1,12 +1,12 @@
 data_users = [
-{"id":"1", "name":"Timmy", "surname":"Trumpet", "age":"35", "roles": '[{"id":"1", "roletype":"2", "group":"1"}, {"id":"2", "roletype":"2", "group":"2"}]'},
-{"id":"2", "name":"Ava", "surname":"Max", "age":"25"},
-{"id":"3", "name":"Becky", "surname":"Hill", "age":"30"},
-{"id":"4", "name":"Dua", "surname":"Lipa", "age":"28"},
-{"id":"5", "name":"Jan", "surname":"Veliky", "age":"60"},
-{"id":"10", "name":"Petr", "surname":"Maly", "age":"25"},
-{"id":"19", "name":"Pavel", "surname":"Novotny", "age":"42"},
-{"id":"20", "name":"David", "surname":"Guetta", "age":"40"}]
+{"id":"1", "name":"Timmy", "surname":"Trumpet", "age":"35", "roles": '[{"id":"1", "roletype":"1", "group":"1"}, {"id":"2", "roletype":"2", "group":"2"}]'},
+{"id":"2", "name":"Ava", "surname":"Max", "age":"25", "roles": '[{"id":"1", "roletype":"1", "group":"1"}, {"id":"2", "roletype":"1", "group":"3"}]'},
+{"id":"3", "name":"Becky", "surname":"Hill", "age":"30", "roles": '[{"id":"1", "roletype":"1", "group":"1"}, {"id":"2", "roletype":"1", "group":"6"}]'},
+{"id":"4", "name":"Dua", "surname":"Lipa", "age":"28", "roles": '[{"id":"1", "roletype":"3", "group":"6"}]'},
+{"id":"5", "name":"Jan", "surname":"Veliky", "age":"60", "roles": '[{"id":"1", "roletype":"2", "group":"2"}, {"id":"2", "roletype":"2", "group":"1"}]'},
+{"id":"10", "name":"Petr", "surname":"Maly", "age":"25", "roles": '[{"id":"1", "roletype":"1", "group":"5"}, {"id":"2", "roletype":"1", "group":"3"}]'},
+{"id":"19", "name":"Pavel", "surname":"Novotny", "age":"42", "roles": '[{"id":"1", "roletype":"2", "group":"6"}, {"id":"2", "roletype":"2", "group":"4"}]'},
+{"id":"20", "name":"David", "surname":"Guetta", "age":"40", "roles": '[{"id":"1", "roletype":"3", "group":"5"}, {"id":"2", "roletype":"2", "group":"1"}, {"id":"2", "roletype":"2", "group":"3"}]'}]
 
 data_groups = [{"id":"1", "name":"FVT", "groupType":"1"},
 {"id":"2", "name":"FVL", "groupType":"1"},
