@@ -55,7 +55,7 @@ query4 = '''
 query5 = '''
     query
     { 
-        person(id:2){
+        person(id:1){
         name
         surname
         roles
@@ -101,10 +101,12 @@ query6 = '''
 
 mut = '''
    mutation {
-    createPerson(name:"Peter", surname:"Veliky"){
+    createPerson(name:"Peter", surname:"Veliky", age:"50"){
         person {
+            id
             name
             surname
+            age
         }
     }
 }
@@ -113,21 +115,10 @@ mut = '''
 mut1 = '''
 mutation
 { 
-    createGrouptype(name:"komando")
+    createGrouptype(name:"ceta")
     {
-        output {
-            name
-        }
-    }
-}
-'''
-
-mut1 = '''
-mutation
-{ 
-    createGrouptype(name:"komando")
-    {
-        output {
+        groupType {
+            id
             name
         }
     }
@@ -141,8 +132,12 @@ mutation
     createGroup(name:"komando")
     {
         group {
+            id
             name
         }
     }
 }
 '''
+
+
+#mutacemi pro create půjdou nastavit jen parametry, které jsou string

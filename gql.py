@@ -9,10 +9,11 @@ class CreatePerson(graphene.Mutation):
     class Arguments:
         name = graphene.String()
         surname = graphene.String()
+        age = graphene.String()
 
-
-    def mutate(root, info, name, surname):
-        person = Person(name = name, surname = surname)
+    def mutate(root, info, name, surname, age):
+        person = database.Person(name = name, surname = surname, age=age)
+        person.AddToDB()
         return CreatePerson(person=person)
 
 class Person(graphene.ObjectType):
@@ -33,12 +34,6 @@ class Person(graphene.ObjectType):
         return parent.age
 
     def resolve_groups(parent, info):
-        #return [{'id': 1, 'name': 'FVT', 'groupType': '1'}, {'id': 2, 'name': 'FVL', 'groupType': '1'}]
-        #očekává se, že bude vracet list skupin - stejných datových struktur, jako jsou na vstupu do class Group
-        #to co vrací return se dává jako vstup do class Group
-        #print(database.RelationMN(database.users, database.groups, database.users_groups, int(parent["id"])))
-        #return database.RelationMN(database.users, database.groups, database.users_groups, parent.id)
-        #bude muset vracet list objektů database.group
         return parent.groups
 
     def resolve_roles(parent, info):
@@ -60,9 +55,11 @@ class CreateGroup(graphene.Mutation):
 
     class Arguments:
         name = graphene.String()
+        #groupType = graphene.Field()
 
     def mutate(root, info, name):
-        group = Group(name = name)
+        group = database.Group(name = name)
+        group.AddToDB()
         return CreateGroup(group=group)
 
 
@@ -74,13 +71,14 @@ class GroupType(graphene.ObjectType):
         return parent.name
 
 class CreateGroupType(graphene.Mutation):
-    output = graphene.Field(GroupType)
+    groupType = graphene.Field(GroupType)
 
     class Arguments:
         name = graphene.String()
 
     def mutate(parent, info, name):
-        groupType = GroupType(name=name)
+        groupType = database.GroupType(name=name)
+        groupType.AddToDB()
         return CreateGroupType(groupType)
 
 class RoleType(graphene.ObjectType):
@@ -128,15 +126,16 @@ class Query(graphene.ObjectType):
         return roleType
 
 
-class MyMutations(graphene.ObjectType):
+class Mutations(graphene.ObjectType):
     create_person = CreatePerson.Field()
     create_group = CreateGroup.Field()
+    create_groupType = CreateGroupType.Field()
     
 
-schema = graphene.Schema(query=Query, mutation=MyMutations)
+schema = graphene.Schema(query=Query, mutation=Mutations)
 #print(schema)
 
-result = schema.execute(input.query6)
+result = schema.execute(input.mut1)
 print(result)
 
-#TODO ke groups přidat roles - aby šlo zobrazit roli ve skupině
+print(database.group_types.GetLine(4))
