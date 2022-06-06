@@ -1,6 +1,5 @@
 import redis
 import data
-import json
 
 class CTable:
     def __init__(self, name, db_no):
@@ -52,9 +51,7 @@ class CTable:
     
     def Populate(self, data): #bere data, dic, kde v každé položce je na prvním místě id
         for line in data:
-            #id = line["id"]
             del line["id"]
-            #self.AddLine(id, line)
             self.AddRecord(line)
 
     def ShowLine(self, id):
@@ -81,82 +78,113 @@ def Relation1N(table1, table2, table1_id): #1:N relace - klíč je na straně N
     else: return None
 
 
-def RelationMN(table1, table2, interTable, table1_id): #M:N přes pomocnou tabulku - vrací list dictionaries - každý dictionary je řádek z table2, která je v relaci
-    #s prvkem z table1 s table1_id např. [{'id': 1, 'name': 'FVT', 'groupType': '1'}, {'id': 2, 'name': 'FVL', 'groupType': '1'}]
+def RelationMN(table1, table2, interTable, table1_id):
+    #sestaví si název klíče podle table1.name
+    #vrací všechny řádky z interTable, které jako value pro sestavený klíč obsahují table1_id
+    #pro RelationMN(groups, users_groups, 1) vrací
+    #[{'users_id': '2', 'groups_id': '1', 'id': 4}, {'users_id': '3', 'groups_id': '1', 'id': 6}, {'users_id': '4', 'groups_id': '1', 'id': 8}, {'users_id': '1', 'groups_id': '1', 'id': 1}]
     line_ids = interTable.GetKeys()
     output = []
 
     for line_id in line_ids:
         if (int(interTable.GetItem(line_id, table1.GetTableName() + "_id")) == table1_id):
-            output.append(table2.GetLine(str(interTable.GetItem(line_id, table2.GetTableName() + "_id"))))
+            output.append(interTable.GetLine(line_id))
 
     if (len(output) != 0): return output
     else: return None
 
 
 class Group:
-    def __init__(self, id = None, name = None, groupType = None):
-        self.id = id
+    def __init__(self, name = None, groupType = None):
+        #to co není list lze nastavit přes konstruktor
+        #ke stringům se přistupuje přímo - k listům pomocí fcí
+        self.id = None #toto budou jen stringy - obsah databáze
         self.name = name
         self.groupType = groupType
-        #self.members = members
+        #members - pomocí GetMembers()
+        #groupType - pomocí GetGroupType
 
     def AddToDB(self): #musíme popsat všechny sloupce tabulky v db kromě id (automaticky tvořeno)
+        #přidá tuto skupinu do databáze pod nové id
         data = {
             "name":str(self.name),
             "groupType": str(self.groupType)}
-
         self.id = groups.AddRecord(data)
 
     def Load(self, group_id):
         self.id = group_id
         self.name = groups.GetItem(group_id, "name")
-        self.groupType = self.LoadGroupType()
-        #self.members = self.LoadMembers()
+        self.groupType = groups.GetItem(group_id, "groupType")
 
-    def LoadGroupType(self):
-        #vrací objekt GroupType pro tuto skupinu
-        gt = GroupType()
-        gt.Load(int(groups.GetItem(self.id, "groupType")))
-        return gt
-
-    def LoadMembers(self): #nefunguje - rekurze s Person - ta má taky group
+    def LoadMembers(self):
+        #vrací pole stringů - jde o id uživatelů, kteří patří do této skupiny
+        #např. ['4', '2', '3', '1'] pro skupinu 1
         data = RelationMN(groups, users, users_groups, int(self.id))
-        out = []
-        if (data == None):
-            out.append(Person())
+
+        if (data != None):
+            out = []
+            for member in data:
+                out.append(str(member["users_id"]))
             return out
-        
-        for member in data:
-            tmp = Person()
-            tmp.Load(int(member["id"]))
-            out.append(tmp)
-        if (len(out) != 0): return out
-        else:
-            out.append(Person())
-            return out
+        else: return []
 
     def UpdateData(self): #aktualizuje všechny string položky - uloží do databáze
         groups.UpdateItem(self.id, "name", self.name)
+        groups.UpdateItem(self.id, "groupType", self.groupType)
+
+    def GetGroupType(self):
+        #v proměnné self.groupType mám teď objekt groupType - chtěl bych tam mít string
+        # který bude obsahovat id příslušného objektu GroupType
+        #vrací objekt GroupType pro tuto skupinu - lze na něm volat name atd.
+        gt = GroupType()
+        gt.Load(int(self.groupType))
+        return gt
+
+    def GetMembers(self):
+        #vrací list objektů Person, kteří jsou členy této skupiny
+        #TODO: prázdná skupina - members = [""]
+        membersIDs = self.LoadMembers()
+        out = []
+        for id in membersIDs:
+            tmp = Person()
+            tmp.Load(int(id))
+            out.append(tmp)
+
+        return out
+
+    def AddMember(self, member_id, roleType_id):
+        users_groups.AddRecord({"users_id":str(member_id), "groups_id":str(self.id), "roleType_id":roleType_id})
 
 
+class Membership: #relace mezi uživatelem a skupinou
+    def __init__(self, roleType_id = None, group_id = None):
+        self.roleType_id = roleType_id #string
+        self.group_id = group_id #string
+
+    def GetGroup(self):
+        gr = Group()
+        gr.Load(int(self.group_id))
+        return gr
+
+    def GetRoleType(self):
+        roleType = RoleType()
+        roleType.Load(int(self.roleType_id))
+        return roleType
 
 
 class Person:
-    def __init__(self, id = None, name = None, surname = None, age = None, roles = None, groups = None):
-        self.id = id
+    def __init__(self, name = None, surname = None, age = None):
+        self.id = None
         self.name = name
         self.surname = surname
         self.age = age
-        self.roles = roles
-        self.groups = groups #do skupiny se bude přiřazovat pomocí specální mutace
+        #memberships - pomocí GetMemberships()
 
     def AddToDB(self):
         data = {
             "name":str(self.name),
             "surname":str(self.surname),
-            "age":str(self.age),
-            "roles":str(self.roles)}
+            "age":str(self.age)}
 
         self.id = users.AddRecord(data)
 
@@ -165,58 +193,32 @@ class Person:
         self.name = users.GetItem(user_id, "name")
         self.surname = users.GetItem(user_id, "surname")
         self.age = users.GetItem(user_id, "age")
-        self.roles = self.LoadRoles() #list objektů role
-        self.groups = self.LoadGroups() #je to list objektů Group
-
-    def LoadGroups(self): #načte skupiny - vrací pole objektů Group
-        data = RelationMN(users, groups, users_groups, int(self.id))
-        out = []
-        if (data == None):
-            out.append(Group())
-            return out
-        
-        for group in data:
-            tmp = Group()
-            tmp.Load(int(group["id"]))
-            out.append(tmp)
-        if (len(out) != 0): return out
-        else:
-            out.append(Group())
-            return out
-
-    def LoadRoles(self): #TODO: vyřešit prázdné role - co tam má být, když není ve skupině
-        data = users.GetItem(self.id, "roles")
-        out = []
-        if (data == None):
-            out.append(Role())
-            return out
-        
-        data = json.loads(data)
-
-        for role in data:
-            tmp = Role()
-            tmp.Load(role)
-            out.append(tmp)
-
-        if (len(out) != 0): return out
-        else:
-            out.append(Role())
-            return out
 
     def UpdateData(self): #aktualizuje všechny string položky - uloží do databáze
         users.UpdateItem(self.id, "name", self.name)
         users.UpdateItem(self.id, "surname", self.surname)
         users.UpdateItem(self.id, "age", self.age)
-           
-    def PrintGroups(self):
-        for group in self.groups:
-            print(f"ID: {group.id}")
-            print(f"Nazev: {group.name}")
-            print(f"groupType: {group.groupType}\n")
+        #TODO: update memberships
+
+    def GetMemberships(self):
+        data = RelationMN(users, groups, users_groups, int(self.id))
+        out = []
+
+        for mem in data:
+            tmp = Membership()
+            tmp.group_id = mem["groups_id"]
+            tmp.roleType_id = mem["roleType_id"]
+            out.append(tmp)
+
+        return out
+
+    def AddToGroup(self, group_id, roleType_id):
+        users_groups.AddRecord({"users_id":self.id, "groups_id":group_id, "roleType_id":roleType_id})
+
 
 class GroupType:
-    def __init__(self, id = None, name = None):
-        self.id = id
+    def __init__(self, name = None):
+        self.id = None
         self.name = name
 
     def AddToDB(self):
@@ -233,35 +235,20 @@ class GroupType:
         group_types.UpdateItem(self.id, "name", self.name)
 
 class RoleType:
-    def __init__(self, id = None, name = None):
-        self.id = id
+    def __init__(self, name = None):
+        self.id = None
         self.name = name
+
+    def AddToDB(self):
+        data = {"name":str(self.name)}
+        self.id = role_types.AddRecord(data)
 
     def Load(self, roleType_id):
         self.id = roleType_id
         self.name = role_types.GetItem(self.id, "name")
 
-class Role:
-    def __init__(self, id = None, roleType=None, group = None):
-        self.id = id
-        self.roleType = roleType
-        self.group = group
-        #self.user_id = user_id #id uživatele, kterému tato role patří
-
-    def Load(self, data): #data = dic jedné role - této role - dic dostanu z person LoadRoles
-        self.id = data["id"]
-        self.roleType = self.LoadRoleType(data["roletype"])
-        self.group = self.LoadGroup(data["group"])
-        
-    def LoadRoleType(self, roleType_id):
-        tmp = RoleType()
-        tmp.Load(int(roleType_id))
-        return tmp
-
-    def LoadGroup(self, group_id):
-        tmp = Group()
-        tmp.Load(int(group_id))
-        return tmp
+    def UpdateData(self):
+        role_types.UpdateItem(self.id, "name", self.name)
 
 
 
@@ -277,33 +264,40 @@ users_groups.Populate(data.data_users_groups)
 group_types.Populate(data.data_groupTypes)
 role_types.Populate(data.data_roleTypes)
 
-#print(GetGroup(groups, 1))
-#data = GetUser(users, 1)
-#data = RelationMN(groups, users, users_groups, 1)
-#print(data[0]["id"])
-#print(groups.GetLine(1))
-#print(users.GetItem("1", "roles"))
-#print(type(GetRolesFromUser(1)))
-#print(GetRolesFromUser(1))
+#gr = Group()
+#gr.Load(3)
+#
+#usr = Person()
+#usr.Load(1)
+#
+#mem = usr.GetMemberships()
+#
+#for m in mem:
+#    print(m.GetGroup().GetGroupType().name)
 
-#p = Person()
-#p.Load(2)
-#print(p.age)
-#p.age="69"
-#p.UpdateData()
-#print(users.GetItem(2, "age"))
-#print(p.roles[1].group.name)
-
-#r = Role()
-#r.Load(json.loads('{"id":"10", "roletype":"1", "group":"1"}'))
-#print(r.group.groupType.name)
-
-
-#users.UpdateItem(1, "test", "Jirka")
-#print(users.GetLine(1))
-#users.DelItem(1, "name")
-#print(users.GetLine(1))
-
-#print(users.GetKeys())
-#users.DelLine(8)
-#print(users.GetKeys())
+#gt = GroupType(name = "specialni skupina")
+#gt.AddToDB()
+#
+#gr = Group()
+#gr.name = "komando"
+#gr.groupType = gt.id
+#gr.AddToDB()
+#
+#rt = RoleType(name = "clen skupiny")
+#rt.AddToDB()
+#
+#
+#usr = Person(name = "Jan", surname = "Novak", age = "36")
+#usr.AddToDB()
+#usr.AddToGroup(gr.id, rt.id)
+#
+#usr2 = Person(name = "Richard", surname = "Hammond")
+#usr2.AddToDB()
+#
+#gr.AddMember(usr2.id, "1")
+#
+#members = gr.GetMembers()
+#
+#for m in members:
+#    print(m.surname)
+#
