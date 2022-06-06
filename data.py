@@ -39,5 +39,3 @@ data_users_groups = [
     {"id":"12", "users_id":"7", "groups_id":"5", "roleType_id":"1"},
     {"id":"13", "users_id":"8", "groups_id":"2", "roleType_id":"2"}
 ]
-
-#zbývá vyřešit zápis do data_users_groups - jinak do všeho vše lze zapsat
