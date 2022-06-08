@@ -1,0 +1,12 @@
+version: "3.9"
+
+services:
+  RedisDB:
+    image: redis:6.2.6
+    restart: always
+  gql:
+    image: "gql_redis"
+    depends_on:
+      - RedisDB
+    ports:
+      - 8001:8000
