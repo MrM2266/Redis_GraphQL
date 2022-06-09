@@ -1,7 +1,27 @@
 import graphene
 import database
 from starlette_graphene3 import GraphQLApp, make_graphiql_handler
-from fastapi import FastAPI
+import fastapi
+import requests
+
+def singleCache(f):
+    cache = None
+    def decorated():
+        nonlocal cache
+        if cache is None:
+            fResult = f()
+            cache = fResult.replace('https://swapi-graphql.netlify.app/.netlify/functions/index', '/gql')
+        else:
+            #print('cached')
+            pass
+        return cache
+    return decorated
+
+@singleCache
+def getSwapi():
+    source = "https://raw.githubusercontent.com/graphql/swapi-graphql/master/public/index.html"
+    r = requests.get(source)
+    return r.text
 
 class Person(graphene.ObjectType):
     id = graphene.ID()
@@ -328,7 +348,16 @@ schemaGQL = graphene.Schema(query=Query, mutation=Mutations)
 #result = schema.execute(input.ctl2)
 #print(result)
 
-graphql_app = GraphQLApp(schemaGQL, on_get=make_graphiql_handler())
+graphql_app = GraphQLApp(schema = schemaGQL, on_get=make_graphiql_handler())
 
-app = FastAPI()
-app.add_route('/gql/', graphql_app)
+app = fastapi.FastAPI()
+@app.get('/')
+def hello():
+    return {'hello': 'world'}
+
+
+@app.get('/gql/', response_class=fastapi.responses.HTMLResponse)
+def swapiUI():
+    return getSwapi()
+
+app.add_route('/gql/', graphql_app, methods=['POST'])
